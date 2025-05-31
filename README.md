@@ -1,6 +1,24 @@
-# fn_finder Module Reference
+# fn_finder
 
-- TODO: intro and basic useage here:
+I wanted to try fennel
+
+I did not want to add a build step to my configurations
+
+I did not want to be unsatisfied with the extra overhead of a transpiler at runtime, especially one with compile time evaluation.
+
+I might want to try some other lua dialects in the future.
+
+`mkFinder` and its helpers makes changing languages just 1 short function passed in via option.
+
+You can also change how it caches. Maybe you want to cache your bytecode to a database instead.
+
+Currently the default search function works for `package.path` and the only other language with a premade search function is fennel.
+
+One may be added that searches the nvim runtime path in the future.
+
+## ⚡Quick Start
+
+- TODO: basic useage here:
 
 ---
 
