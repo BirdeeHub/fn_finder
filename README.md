@@ -14,7 +14,7 @@ You can also change how it caches. Maybe you want to cache your bytecode to a da
 
 Currently the default search function works for `package.path` and the only other language with a premade search function is fennel.
 
-One may be added that searches the nvim runtime path in the future.
+One will be added that searches the nvim runtime path in the future, but you can do it yourself in the meantime, as the current search function accepts options!
 
 ## ⚡Quick Start
 
