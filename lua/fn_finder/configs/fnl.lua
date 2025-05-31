@@ -57,7 +57,7 @@ return function(MAIN)
                 return lua_code, modpath, nil
             else
                 return nil, nil,
-                    "\n\tfnlFinder could not find a valid fennel file for '" ..
+                    "\n\tfn_finder fennel search function could not find a valid fennel file for '" ..
                     modname .. "': " .. tostring(lua_code or modpath)
             end
         end
