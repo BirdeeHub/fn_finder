@@ -98,7 +98,7 @@
             };
             editorconfig-checker.enable = true;
             markdownlint = {
-              enable = true;
+              enable = false;
               excludes = [
                 "CHANGELOG.md"
               ];

@@ -24,43 +24,51 @@ return function(MAIN)
     ---@return fun(modname: string):function|string?
     M.mkFinder = function(loader_opts)
         loader_opts = loader_opts or {}
-        loader_opts.search = loader_opts.search or function(modname, opts)
-            local ok, fennel = pcall(require, "fennel")
-            if not ok or not fennel then
-                return nil, nil, "\n\tfn_finder fennel searcher cannot require('fennel')"
-            end
-            opts = opts or {}
-            if opts.set_global then
-                _G.fennel = fennel
-            end
-            if type(opts.macro_path) == "string" then
-                fennel["macro-path"] = opts.macro_path
-            elseif type(opts.macro_path) == "function" then
-                fennel["macro-path"] = opts.macro_path(fennel["macro-path"])
-            end
-            if type(opts.macro_searchers) == "function" then
-                table.insert(fennel["macro-searchers"], opts.macro_searchers)
-            elseif type(opts.macro_searchers) == "table" then
-                for _, v in ipairs(opts.macro_searchers or {}) do
-                    table.insert(fennel["macro-searchers"], v)
+        loader_opts.search = loader_opts.search
+            or function(modname, opts)
+                local ok, fennel = pcall(require, "fennel")
+                if not ok or not fennel then
+                    return nil, nil, "\n\tfn_finder fennel searcher cannot require('fennel')"
+                end
+                opts = opts or {}
+                if opts.set_global then
+                    _G.fennel = fennel
+                end
+                if type(opts.macro_path) == "string" then
+                    fennel["macro-path"] = opts.macro_path
+                elseif type(opts.macro_path) == "function" then
+                    fennel["macro-path"] = opts.macro_path(fennel["macro-path"])
+                end
+                if type(opts.macro_searchers) == "function" then
+                    table.insert(fennel["macro-searchers"], opts.macro_searchers)
+                elseif type(opts.macro_searchers) == "table" then
+                    for _, v in ipairs(opts.macro_searchers or {}) do
+                        table.insert(fennel["macro-searchers"], v)
+                    end
+                end
+                local pt = type(opts.path)
+                local modpath
+                if pt == "function" then
+                    modpath = opts.path(modname, fennel.path)
+                elseif pt == "string" then
+                    modpath = MAIN.searchModule(modname, opts.path)
+                else
+                    modpath = MAIN.searchModule(modname, fennel.path)
+                end
+                opts.filename = modpath
+                local lua_code
+                ok, lua_code = pcall(fennel.compileString, read_file(modpath), opts.compiler or {})
+                if ok and lua_code then
+                    return lua_code, modpath, nil
+                else
+                    return nil,
+                        nil,
+                        "\n\tfn_finder fennel search function could not find a valid fennel file for '"
+                            .. modname
+                            .. "': "
+                            .. tostring(lua_code or modpath)
                 end
             end
-            local pt = type(opts.path)
-            local modpath
-            if pt == "function" then modpath = opts.path(modname, fennel.path)
-            elseif pt == "string" then modpath = MAIN.searchModule(modname, opts.path)
-            else modpath = MAIN.searchModule(modname, fennel.path) end
-            opts.filename = modpath
-            local lua_code
-            ok, lua_code = pcall(fennel.compileString, read_file(modpath), opts.compiler or {})
-            if ok and lua_code then
-                return lua_code, modpath, nil
-            else
-                return nil, nil,
-                    "\n\tfn_finder fennel search function could not find a valid fennel file for '" ..
-                    modname .. "': " .. tostring(lua_code or modpath)
-            end
-        end
         return MAIN.mkFinder(loader_opts)
     end
 

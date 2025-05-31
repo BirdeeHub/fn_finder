@@ -11,19 +11,24 @@ if load == nil then -- 5.1 compat
                 res = res .. (v or "")
                 return v
             end
-            while i() do end
+            while i() do
+            end
             chunk = res
         end
         local f, err = loadstring(chunk, chunkname)
-        if not f then return nil, err end
-        if env then setfenv(f, env) end
+        if not f then
+            return nil, err
+        end
+        if env then
+            setfenv(f, env)
+        end
         return f
     end
 end
 
 -- have searchModule use package.config to process package.path (windows compat)
 local cfg = string.gmatch(package.config, "([^\n]+)")
-local dirsep, pathsep, pathmark = cfg() or '/', cfg() or ';', cfg() or '?'
+local dirsep, pathsep, pathmark = cfg() or "/", cfg() or ";", cfg() or "?"
 
 local function write_file(filename, content)
     local ok, file = pcall(io.open, filename, "w")
@@ -47,7 +52,10 @@ end
 
 local function simple_table_hash(input)
     local ok_types = {
-        number = true, string = true, boolean = true, ["nil"] = true,
+        number = true,
+        string = true,
+        boolean = true,
+        ["nil"] = true,
     }
     local visited = {}
     local cerealize -- hehe... ignore the breakfast pun, this hash is only lightly scrambled
@@ -69,8 +77,12 @@ local function simple_table_hash(input)
     end
     cerealize = function(tbl)
         local keys = {}
-        for k in pairs(tbl) do table.insert(keys, k) end
-        table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+        for k in pairs(tbl) do
+            table.insert(keys, k)
+        end
+        table.sort(keys, function(a, b)
+            return tostring(a) < tostring(b)
+        end)
         local acc = ""
         for _, k in ipairs(keys) do
             acc = acc .. valstr(k) .. "=" .. valstr(tbl[k]) .. ","
@@ -96,9 +108,11 @@ local function get_file_meta(modpath)
     local uv = (vim or {}).uv or (vim or {}).loop
     if not uv then
         local ok, err = pcall(require, "luv")
-        if ok then uv = err end
+        if ok then
+            uv = err
+        end
     end
-    local err = nil
+    local err
     local mtime
     local ctime
     local size
@@ -113,9 +127,11 @@ local function get_file_meta(modpath)
     else
         local ok, lfs = pcall(require, "lfs")
         if ok then
-            mtime, err = lfs.attributes(modpath, "modification")
-            ctime, err = lfs.attributes(modpath, "change")
-            size, err = lfs.attributes(modpath, "size")
+            local e1, e2, e3
+            mtime, e1 = lfs.attributes(modpath, "modification")
+            ctime, e2 = lfs.attributes(modpath, "change")
+            size, e3 = lfs.attributes(modpath, "size")
+            err = e1 or e2 or e3
         else
             err = "fn_finder default fs_lib setting requires uv or lfs"
         end
@@ -138,57 +154,68 @@ end
 ---@return fn_finder.Meta?
 local default_fetch = function(modname, cache_opts)
     local contents, err = read_file((cache_opts.cache_dir or "/tmp/fn_finder_cache") .. dirsep .. modname)
-    if err or not contents then return nil, nil end
-    local zero = contents:find('\0', 1, true) -- plain find
-    if not zero then return nil, nil end
+    if err or not contents then
+        return nil, nil
+    end
+    local zero = contents:find("\0", 1, true) -- plain find
+    if not zero then
+        return nil, nil
+    end
     local header_str = contents:sub(1, zero - 1)
     local chunk = contents:sub(zero + 1)
     local fields = {}
     for field in (header_str .. ";"):gmatch("([^;]*);") do
         table.insert(fields, field)
     end
-    if #fields < 6 then return nil, nil end
-    return chunk, {
-        modname = fields[1],
-        modpath = fields[2],
-        opts_hash = tonumber(fields[3]),
-        mtime = tonumber(fields[4]),
-        ctime = tonumber(fields[5]),
-        size = tonumber(fields[6]),
-    }
+    if #fields < 6 then
+        return nil, nil
+    end
+    return chunk,
+        {
+            modname = fields[1],
+            modpath = fields[2],
+            opts_hash = tonumber(fields[3]),
+            mtime = tonumber(fields[4]),
+            ctime = tonumber(fields[5]),
+            size = tonumber(fields[6]),
+        }
 end
 
 ---@param chunk string
 ---@param meta fn_finder.Meta
 ---@param cache_opts table
 local function cache_chunk(chunk, meta, cache_opts)
-    local mkdir = cache_opts.mkdir or function(p)
-        local uv = (vim or {}).uv or (vim or {}).loop
-        if not uv then
-            local ok, err = pcall(require, "luv")
-            if ok then
-                uv = err
+    local mkdir = cache_opts.mkdir
+        or function(p)
+            local uv = (vim or {}).uv or (vim or {}).loop
+            if not uv then
+                local ok, err = pcall(require, "luv")
+                if ok then
+                    uv = err
+                end
+            end
+            if uv then
+                uv.fs_mkdir(p, 493)
+            else
+                local ok, lfs = pcall(require, "lfs")
+                if ok then
+                    lfs.mkdir(p)
+                end
             end
         end
-        if uv then
-            uv.fs_mkdir(p, 493)
-        else
-            local ok, lfs = pcall(require, "lfs")
-            if ok then
-                lfs.mkdir(p)
-            end
-        end
-    end
     local dir = cache_opts.cache_dir or "/tmp/fn_finder_cache"
     mkdir(dir)
     local header = { meta.modname, meta.modpath, meta.opts_hash, meta.mtime, meta.ctime, meta.size }
     ---@diagnostic disable-next-line: cast-local-type
-    write_file(dir .. dirsep .. meta.modname, table.concat(header, ';') .. '\0' .. chunk)
+    write_file(dir .. dirsep .. meta.modname, table.concat(header, ";") .. "\0" .. chunk)
 end
 
 local function meta_eq(m1, m2)
-    return m1.modpath == m2.modpath and m1.modname == m2.modname and m1.mtime == m2.mtime
-        and m1.ctime == m2.ctime and m1.size == m2.size
+    return m1.modpath == m2.modpath
+        and m1.modname == m2.modname
+        and m1.mtime == m2.mtime
+        and m1.ctime == m2.ctime
+        and m1.size == m2.size
         and m1.opts_hash == m2.opts_hash
 end
 
@@ -231,7 +258,7 @@ end
 ---alternatively, you may fetch the meta class yourself and return a function representing the module.
 ---@field search? string|fun(n: string, search_opts: table, opts_hash: number, env?: table):(chunk: nil|string|fun():(string|any)?, modpath: (string|fn_finder.Meta)?, err: string?)
 ---Attention: if get_cached returns a chunk, it must also return meta
----@field get_cached? fun(modname: string, cache_opts: table):(chunk: nil|string|fun():string?, meta: fn_finder.Meta)
+---@field get_cached? fun(modname: string, cache_opts: table):(chunk: nil|string|fun():string?, meta: fn_finder.Meta, err: string?)
 ---@field cache_chunk? fun(chunk: string, meta: fn_finder.Meta, cache_opts: table)
 ---@field fs_lib? fun(modname: string):fn_finder.FileAttrs?
 
@@ -240,19 +267,19 @@ end
 M.mkFinder = function(loader_opts)
     loader_opts = loader_opts or {}
     loader_opts.auto_invalidate = loader_opts.auto_invalidate ~= false
-    local opts_hash = simple_table_hash {
+    local opts_hash = simple_table_hash({
         VERSION = _VERSION,
         loader_opts = loader_opts,
-    }
+    })
     return function(modname)
         local chunk, modpath, err = fetch_cached(modname, opts_hash, loader_opts)
         local mkmsg = function(n, e)
             return "\n\tModule not found: '" .. n .. "'" .. (e and (" " .. tostring(e)) or "")
         end
-        if modpath and chunk then
+        if not err and modpath and chunk then
             chunk, err = _load(chunk, "@" .. modpath, "b", loader_opts.env)
             return chunk or mkmsg(modname, err)
-        else
+        elseif not err then
             local spath = loader_opts.search or package.path
             if type(spath) == "function" then
                 ---@diagnostic disable-next-line: cast-local-type
