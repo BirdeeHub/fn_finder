@@ -85,13 +85,13 @@ local function simple_table_hash(input)
     return hash
 end
 
----@class fnFinder.FileAttrs
+---@class fn_finder.FileAttrs
 ---@field mtime number
 ---@field ctime number
 ---@field size number
 
 ---@param modpath string
----@return fnFinder.FileAttrs?
+---@return fn_finder.FileAttrs?
 local function get_file_meta(modpath)
     local uv = (vim or {}).uv or (vim or {}).loop
     if not uv then
@@ -117,7 +117,7 @@ local function get_file_meta(modpath)
             ctime, err = lfs.attributes(modpath, "change")
             size, err = lfs.attributes(modpath, "size")
         else
-            err = "fnFinder default fs_lib setting requires uv or lfs"
+            err = "fn_finder default fs_lib setting requires uv or lfs"
         end
     end
     if not err and mtime and ctime and size then
@@ -127,7 +127,7 @@ local function get_file_meta(modpath)
     end
 end
 
----@class fnFinder.Meta: fnFinder.FileAttrs
+---@class fn_finder.Meta: fn_finder.FileAttrs
 ---@field modname string
 ---@field modpath string
 ---@field opts_hash number
@@ -135,9 +135,9 @@ end
 ---@param modname string
 ---@param cache_opts table
 ---@return nil|string|fun():string? chunk
----@return fnFinder.Meta?
+---@return fn_finder.Meta?
 local default_fetch = function(modname, cache_opts)
-    local contents, err = read_file((cache_opts.cache_dir or "/tmp/fnFinderCache") .. dirsep .. modname)
+    local contents, err = read_file((cache_opts.cache_dir or "/tmp/fn_finder_cache") .. dirsep .. modname)
     if err or not contents then return nil, nil end
     local zero = contents:find('\0', 1, true) -- plain find
     if not zero then return nil, nil end
@@ -159,7 +159,7 @@ local default_fetch = function(modname, cache_opts)
 end
 
 ---@param chunk string
----@param meta fnFinder.Meta
+---@param meta fn_finder.Meta
 ---@param cache_opts table
 local function cache_chunk(chunk, meta, cache_opts)
     local mkdir = cache_opts.mkdir or function(p)
@@ -179,7 +179,7 @@ local function cache_chunk(chunk, meta, cache_opts)
             end
         end
     end
-    local dir = cache_opts.cache_dir or "/tmp/fnFinderCache"
+    local dir = cache_opts.cache_dir or "/tmp/fn_finder_cache"
     mkdir(dir)
     local header = { meta.modname, meta.modpath, meta.opts_hash, meta.mtime, meta.ctime, meta.size }
     ---@diagnostic disable-next-line: cast-local-type
@@ -194,7 +194,7 @@ end
 
 ---@param modname string
 ---@param opts_hash number
----@param loader_opts fnFinder.LoaderOpts
+---@param loader_opts fn_finder.LoaderOpts
 ---@return nil|string|fun():string? chunk
 ---@return string? modpath
 local function fetch_cached(modname, opts_hash, loader_opts)
@@ -205,7 +205,7 @@ local function fetch_cached(modname, opts_hash, loader_opts)
     if loader_opts.auto_invalidate then
         local m2 = loader_opts.fs_lib and loader_opts.fs_lib(meta.modpath) or get_file_meta(meta.modpath)
         if m2 then
-            ---@cast m2 fnFinder.Meta
+            ---@cast m2 fn_finder.Meta
             m2.modpath = meta.modpath
             m2.modname = modname
             m2.opts_hash = opts_hash
@@ -221,7 +221,7 @@ local function fetch_cached(modname, opts_hash, loader_opts)
     return nil, nil
 end
 
----@class fnFinder.LoaderOpts
+---@class fn_finder.LoaderOpts
 ---@field search_opts? table
 ---@field cache_opts? table
 ---@field strip? boolean
@@ -229,13 +229,13 @@ end
 ---@field auto_invalidate? boolean
 ---Attention: if search returns a chunk, it must also return its modpath
 ---alternatively, you may fetch the meta class yourself and return a function representing the module.
----@field search? string|fun(n: string, search_opts: table, opts_hash: number, env?: table):(chunk: nil|string|fun():(string|any)?, modpath: (string|fnFinder.Meta)?, err: string?)
+---@field search? string|fun(n: string, search_opts: table, opts_hash: number, env?: table):(chunk: nil|string|fun():(string|any)?, modpath: (string|fn_finder.Meta)?, err: string?)
 ---Attention: if get_cached returns a chunk, it must also return meta
----@field get_cached? fun(modname: string, cache_opts: table):(chunk: nil|string|fun():string?, meta: fnFinder.Meta)
----@field cache_chunk? fun(chunk: string, meta: fnFinder.Meta, cache_opts: table)
----@field fs_lib? fun(modname: string):fnFinder.FileAttrs?
+---@field get_cached? fun(modname: string, cache_opts: table):(chunk: nil|string|fun():string?, meta: fn_finder.Meta)
+---@field cache_chunk? fun(chunk: string, meta: fn_finder.Meta, cache_opts: table)
+---@field fs_lib? fun(modname: string):fn_finder.FileAttrs?
 
----@param loader_opts? fnFinder.LoaderOpts
+---@param loader_opts? fn_finder.LoaderOpts
 ---@return fun(modname: string):function|string?
 M.mkFinder = function(loader_opts)
     loader_opts = loader_opts or {}
@@ -264,7 +264,7 @@ M.mkFinder = function(loader_opts)
             if modpath and chunk then
                 if type(modpath) == "table" then
                     ---@diagnostic disable-next-line: cast-type-mismatch
-                    ---@cast modpath fnFinder.Meta
+                    ---@cast modpath fn_finder.Meta
                     local meta = modpath
                     local ok, compiled = pcall(string.dump, chunk, loader_opts.strip)
                     if ok then
@@ -279,7 +279,7 @@ M.mkFinder = function(loader_opts)
                         local ok, compiled = pcall(string.dump, chunk, loader_opts.strip)
                         local meta = loader_opts.fs_lib and loader_opts.fs_lib(modpath) or get_file_meta(modpath)
                         if ok and compiled and meta then
-                            ---@cast meta fnFinder.Meta
+                            ---@cast meta fn_finder.Meta
                             meta.opts_hash = opts_hash
                             meta.modname = modname
                             meta.modpath = modpath

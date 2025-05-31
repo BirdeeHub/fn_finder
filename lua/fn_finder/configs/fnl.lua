@@ -11,23 +11,23 @@ return function(MAIN)
         return nil, file
     end
 
-    ---@class fnFinder.FennelSearchOpts
+    ---@class fn_finder.FennelSearchOpts
     ---@field path? string|fun(modname: string, existing: string):(modpath: string)
     ---@field macro_path? string|fun(existing: string):(full_path: string)
     ---@field macro_searchers? (fun(modname: string):(function|string)?)[]|fun(modname: string):(function|string)?
     ---@field compiler? table -- fennel compiler options
 
-    ---@class fnFinder.FennelOpts : fnFinder.LoaderOpts
-    ---@field search_opts? fnFinder.FennelSearchOpts
+    ---@class fn_finder.FennelOpts : fn_finder.LoaderOpts
+    ---@field search_opts? fn_finder.FennelSearchOpts
 
-    ---@param loader_opts? fnFinder.FennelOpts
+    ---@param loader_opts? fn_finder.FennelOpts
     ---@return fun(modname: string):function|string?
     M.mkFinder = function(loader_opts)
         loader_opts = loader_opts or {}
         loader_opts.search = loader_opts.search or function(modname, opts)
             local ok, fennel = pcall(require, "fennel")
             if not ok or not fennel then
-                return nil, nil, "\n\tfnFinder fennel searcher cannot require('fennel')"
+                return nil, nil, "\n\tfn_finder fennel searcher cannot require('fennel')"
             end
             opts = opts or {}
             if opts.set_global then
@@ -64,8 +64,8 @@ return function(MAIN)
         return MAIN.mkFinder(loader_opts)
     end
 
-    ---@overload fun(opts: fnFinder.FennelOpts)
-    ---@overload fun(pos: number, opts: fnFinder.FennelOpts)
+    ---@overload fun(opts: fn_finder.FennelOpts)
+    ---@overload fun(pos: number, opts: fn_finder.FennelOpts)
     M.install = function(pos, opts)
         if type(pos) == "number" then
             table.insert(package.loaders or package.searchers, pos, M.mkFinder(opts or {}))
