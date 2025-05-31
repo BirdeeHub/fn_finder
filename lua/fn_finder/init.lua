@@ -47,7 +47,7 @@ local function read_file(filename)
         file:close()
         return content
     end
-    return nil, file
+    return nil, "Could not read file '" .. filename .. "'"
 end
 
 local function simple_table_hash(input)
@@ -112,7 +112,7 @@ local function get_file_meta(modpath)
             uv = err
         end
     end
-    local err
+    local err = nil
     local mtime
     local ctime
     local size
@@ -131,7 +131,7 @@ local function get_file_meta(modpath)
             mtime, e1 = lfs.attributes(modpath, "modification")
             ctime, e2 = lfs.attributes(modpath, "change")
             size, e3 = lfs.attributes(modpath, "size")
-            err = e1 or e2 or e3
+            err = e1 or e2 or e3 or err
         else
             err = "fn_finder default fs_lib setting requires uv or lfs"
         end
@@ -230,7 +230,7 @@ local function fetch_cached(modname, opts_hash, loader_opts)
         return nil, nil
     end
     if loader_opts.auto_invalidate then
-        local m2 = loader_opts.fs_lib and loader_opts.fs_lib(meta.modpath) or get_file_meta(meta.modpath)
+        local m2 = loader_opts.fs_lib and loader_opts.fs_lib(meta.modpath, modname) or get_file_meta(meta.modpath)
         if m2 then
             ---@cast m2 fn_finder.Meta
             m2.modpath = meta.modpath
@@ -260,7 +260,7 @@ end
 ---Attention: if get_cached returns a chunk, it must also return meta
 ---@field get_cached? fun(modname: string, cache_opts: table):(chunk: nil|string|fun():string?, meta: fn_finder.Meta, err: string?)
 ---@field cache_chunk? fun(chunk: string, meta: fn_finder.Meta, cache_opts: table)
----@field fs_lib? fun(modname: string):fn_finder.FileAttrs?
+---@field fs_lib? fun(modpath: string, modname: string):fn_finder.FileAttrs?
 
 ---@param loader_opts? fn_finder.LoaderOpts
 ---@return fun(modname: string):function|string?
@@ -304,7 +304,8 @@ M.mkFinder = function(loader_opts)
                     chunk, err = _load(chunk, "@" .. modpath, "t", loader_opts.env)
                     if chunk then
                         local ok, compiled = pcall(string.dump, chunk, loader_opts.strip)
-                        local meta = loader_opts.fs_lib and loader_opts.fs_lib(modpath) or get_file_meta(modpath)
+                        local meta = loader_opts.fs_lib and loader_opts.fs_lib(modpath, modname)
+                            or get_file_meta(modpath)
                         if ok and compiled and meta then
                             ---@cast meta fn_finder.Meta
                             meta.opts_hash = opts_hash

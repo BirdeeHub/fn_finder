@@ -8,13 +8,14 @@ return function(MAIN)
             file:close()
             return content
         end
-        return nil, file
+        return nil, "Could not read file '" .. filename .. "'"
     end
 
     ---@class fn_finder.FennelSearchOpts
     ---@field path? string|fun(modname: string, existing: string):(modpath: string)
     ---@field macro_path? string|fun(existing: string):(full_path: string)
     ---@field macro_searchers? (fun(modname: string):(function|string)?)[]|fun(modname: string):(function|string)?
+    ---@field set_global? boolean
     ---@field compiler? table -- fennel compiler options
 
     ---@class fn_finder.FennelOpts : fn_finder.LoaderOpts

@@ -14,7 +14,7 @@ You can also change how it caches. Maybe you want to cache your bytecode to a da
 
 Currently the default search function works for `package.path` and the only other language with a premade search function is fennel.
 
-One will be added that searches the nvim runtime path in the future, but you can do it yourself in the meantime with `vim.loader.find`!
+One will be added that searches the nvim runtime path in the future, but it is fully possible to do this as the end user as well!
 
 ## ⚡Quick Start
 
@@ -46,9 +46,9 @@ Creates a module loader function suitable for use in `package.loaders` or `packa
 * `cache_opts` (`table?`): Options passed to the `get_cached` and `cache_chunk` functions. The default implementations accept:
     - `cache_dir` (`string?`): The directory to cache chunks in, defaults to `"/tmp/fn_finder/"`
     - `mkdir` (`fun(dir: string): string?`): Alternate function to create a directory
-* `get_cached` (`fun(modname: string, cache_opts: table): (string | fun(): string?, fn_finder.Meta)?`): Alternate function to retrieve a cached chunk and its metadata.
-* `cache_chunk` (`fun(chunk: string, meta: fn_finder.Meta, cache_opts: table)?`): Alternate function to write a chunk and its metadata to cache.
-* `fs_lib` (`fun(modname: string): fn_finder.FileAttrs?`): Alternate function to retrieve file system metadata, used for invalidation.
+* `get_cached` (`TODO`): Alternate function to retrieve a cached chunk and its metadata.
+* `cache_chunk` (`TODO`): Alternate function to write a chunk and its metadata to cache.
+* `fs_lib` (`fun(modpath: string, modname: string): fn_finder.FileAttrs?`): Alternate function to retrieve file system metadata, used for invalidation.
 * `auto_invalidate` (`boolean?`): Whether to automatically invalidate cache entries by comparing metadata, defaults to `true`.
 * `strip` (`boolean?`): Whether to strip lua debug info from cached chunks, defaults to `false`.
 * `env` (`table?`): Table representing the execution environment for loaded modules (passed to lua `load` function if provided)
