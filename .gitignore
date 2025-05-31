@@ -4,3 +4,6 @@
 **/.cache
 **/compile_commands.json
 **/build
+**/.pre-commit-config.yaml
+**/.direnv
+**/.luarc.json
