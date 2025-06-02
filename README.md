@@ -1,5 +1,7 @@
 # fn_finder
 
+# ATTENTION: THIS REPO IS STILL UNDER EARLY ALPHA DEVELOPMENT. ANYTHING IS SUBJECT TO CHANGE.
+
 I wanted to try fennel
 
 I did not want to add a build step to my configurations
