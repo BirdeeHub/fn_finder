@@ -26,7 +26,7 @@ One will be added that searches the nvim runtime path in the future, but it is f
 
 ## 📦 Module: `fn_finder`
 
-### `fn_finder.mkFinder(loader_opts?: fn_finder.LoaderOpts): (modname: string) -> string|function|nil`
+### `fn_finder.mkFinder(loader_opts?: fn_finder.LoaderOpts): fun(modname: string): string|function|nil`
 
 The function that provides the core functionality of the `fn_finder` module.
 
