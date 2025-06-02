@@ -10,13 +10,11 @@ I did not want to be unsatisfied with the extra overhead of a transpiler at runt
 
 I might want to try some other lua dialects in the future.
 
-`mkFinder` and its helpers makes changing languages just 1 short function passed in via option.
-
 You can also change how it caches. Maybe you want to cache your bytecode to a database instead.
 
-Currently the default search function works for `package.path` and the only other language with a premade search function is fennel.
+`mkFinder` and its helpers makes changing languages as simple as defining a new search function passed in via option.
 
-One will be added that searches the nvim runtime path in the future, but it is fully possible to do this as the end user as well!
+Currently the default search function works for `package.path` and the only other language with a premade search function is fennel.
 
 ## ⚡Quick Start
 
