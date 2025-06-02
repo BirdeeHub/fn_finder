@@ -1,7 +1,8 @@
 return function(MAIN, _)
     local M = {}
 
-    local dsep, psep, phold = MAIN.pkgConfig.dirsep, MAIN.pkgConfig.pathsep, MAIN.pkgConfig.pathmark
+    local dsep, psep, phold, errpre =
+        MAIN.pkgConfig.dirsep, MAIN.pkgConfig.pathsep, MAIN.pkgConfig.pathmark, MAIN.pkgConfig.errpre
     local DEFAULT_FNL_PATH = "." .. dsep .. phold .. ".fnl" .. psep .. "." .. dsep .. phold .. dsep .. "init.fnl"
 
     local function rtpfile(dir, modname, patterns)
@@ -96,14 +97,15 @@ return function(MAIN, _)
                                         return res
                                     end
                                 end
-                                return "\t\nCould not load fennel macro module '"
+                                return errpre
+                                    .. "Could not load fennel macro module '"
                                     .. tostring(n)
                                     .. "' "
                                     .. tostring(res or mp)
                             end
-                            return "\t\nCould not load fennel to call macro module '" .. tostring(n) .. "'"
+                            return errpre .. "Could not load fennel to call macro module '" .. tostring(n) .. "'"
                         else
-                            return "\t\nCould not find macro for module name '" .. tostring(n) .. "'"
+                            return errpre .. "Could not find macro for module name '" .. tostring(n) .. "'"
                         end
                     end
                     if type(fennel) == "table" then
@@ -131,9 +133,12 @@ return function(MAIN, _)
                 if not modpath then
                     return nil,
                         nil,
-                        "\n\tfn_finder fennel searcher could not find a fennel file for '" .. tostring(modname) .. "'"
+                        errpre
+                            .. "fn_finder fennel searcher could not find a fennel file for '"
+                            .. tostring(modname)
+                            .. "'"
                 elseif not fennel then
-                    return nil, nil, "\n\tfn_finder fennel searcher cannot require('fennel')"
+                    return nil, nil, errpre .. "fn_finder fennel searcher cannot require('fennel')"
                 end
                 opts.compiler = opts.compiler or {}
                 opts.compiler.filename = modpath
@@ -143,9 +148,11 @@ return function(MAIN, _)
                 else
                     return nil,
                         nil,
-                        "\n\tfn_finder fennel search function could not find a valid fennel file for '" .. tostring(
-                            modname
-                        ) .. "': " .. tostring(lua_code or modpath)
+                        errpre
+                            .. "fn_finder fennel search function could not find a valid fennel file for '"
+                            .. tostring(modname)
+                            .. "': "
+                            .. tostring(lua_code or modpath)
                 end
             end
         return MAIN.mkFinder(loader_opts)

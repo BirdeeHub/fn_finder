@@ -138,6 +138,7 @@ A convenience table for path parsing and substitution tokens, from Lua’s `pack
 * `dirsep` (`string`): Directory separator (e.g. `'/'` on Unix, `'\\'` on Windows).
 * `pathsep` (`string`): Path separator used to separate search paths (e.g. `';'`).
 * `pathmark` (`string`): Placeholder used in path templates to be replaced with the module name (e.g. `'?'`).
+- `errpre` (`string`): Error message prefix (`"\n\t"` for pre 5.4, else `""`)
 
 #### Example:
 

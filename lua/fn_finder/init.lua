@@ -26,9 +26,19 @@ if load == nil then -- 5.1 compat
     end
 end
 
+local lua_ver_at_least = function(major, minor)
+    local mj, mn = _VERSION:match("Lua (%d+)%.(%d+)")
+    mj, mn = tonumber(mj), tonumber(mn)
+    if not mj or not mn then
+        return false
+    end
+    return mj > major or (mj == major and mn >= minor)
+end
+
 -- have searchModule use package.config to process package.path (windows compat)
 local cfg = string.gmatch(package.config, "([^\n]+)")
 local dirsep, pathsep, pathmark = cfg() or "/", cfg() or ";", cfg() or "?"
+local errpre = lua_ver_at_least(5, 4) and "" or "\n\t"
 
 local function write_file(filename, content)
     local ok, file = pcall(io.open, filename, "w")
@@ -274,7 +284,7 @@ M.mkFinder = function(loader_opts)
     return function(modname)
         local chunk, modpath, err = fetch_cached(modname, opts_hash, loader_opts)
         local mkmsg = function(n, e)
-            return "\n\tModule not found: '" .. n .. "'" .. (e and (" " .. tostring(e)) or "")
+            return errpre .. "Module not found: '" .. n .. "'" .. (e and (" " .. tostring(e)) or "")
         end
         if not err and modpath and chunk then
             chunk, err = _load(chunk, "@" .. modpath, "b", loader_opts.env)
@@ -323,7 +333,7 @@ M.mkFinder = function(loader_opts)
     end
 end
 
-M.pkgConfig = { dirsep = dirsep, pathsep = pathsep, pathmark = pathmark }
+M.pkgConfig = { dirsep = dirsep, pathsep = pathsep, pathmark = pathmark, errpre = errpre }
 
 -- Escape a string for safe use in a Lua pattern
 function M.escapepat(str)
