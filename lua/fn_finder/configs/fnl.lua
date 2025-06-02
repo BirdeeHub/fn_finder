@@ -1,5 +1,25 @@
-return function(MAIN)
+return function(MAIN, _)
     local M = {}
+
+    local dsep, psep, phold = MAIN.pkgConfig.dirsep, MAIN.pkgConfig.pathsep, MAIN.pkgConfig.pathmark
+    local DEFAULT_FNL_PATH = "." .. dsep .. phold .. ".fnl" .. psep .. "." .. dsep .. phold .. dsep .. "init.fnl"
+
+    local function rtpfile(dir, modname, patterns)
+        dir = type(dir) == "string" and dir or "lua"
+        modname = modname:gsub("%.", "/")
+        patterns = patterns or {}
+        local modpath
+        local i = 1
+        while not modpath do
+            local pattern = patterns[i]
+            if not pattern then
+                break
+            end
+            modpath = vim.api.nvim_get_runtime_file(dir .. "/" .. modname .. pattern, false)[1]
+            i = i + 1
+        end
+        return modpath
+    end
 
     local function read_file(filename)
         local ok, file = pcall(io.open, filename, "r")
@@ -8,15 +28,14 @@ return function(MAIN)
             file:close()
             return content
         end
-        return nil, "Could not read file '" .. filename .. "'"
+        return nil, "Could not read file '" .. tostring(filename) .. "'"
     end
 
     ---@class fn_finder.FennelSearchOpts
     ---@field path? string|fun(modname: string, existing: string):(modpath: string)
-    ---@field macro_path? string|fun(existing: string):(full_path: string)
-    ---@field macro_searchers? (fun(modname: string):(function|string)?)[]|fun(modname: string):(function|string)?
-    ---@field set_global? boolean
+    ---@field on_first_compile? fun(fennel: table, opts: fn_finder.FennelSearchOpts)
     ---@field compiler? table -- fennel compiler options
+    ---@field nvim? boolean|string?
 
     ---@class fn_finder.FennelOpts : fn_finder.LoaderOpts
     ---@field search_opts? fn_finder.FennelSearchOpts
@@ -25,49 +44,108 @@ return function(MAIN)
     ---@return fun(modname: string):function|string?
     M.mkFinder = function(loader_opts)
         loader_opts = loader_opts or {}
+        local triggered = false
+        local fennel = package.loaded["fennel"] or nil
+        if type(fennel) ~= "table" then
+            fennel = nil
+        end
+        if (loader_opts.search_opts or {}).nvim then
+            loader_opts.cache_opts = loader_opts.cache_opts or {}
+            loader_opts.cache_opts.cache_dir = loader_opts.cache_opts.cache_dir
+                or (vim.fn.stdpath("cache") .. dsep .. "fn_finder_cache")
+        end
         loader_opts.search = loader_opts.search
             or function(modname, opts)
-                local ok, fennel = pcall(require, "fennel")
-                if not ok or not fennel then
-                    return nil, nil, "\n\tfn_finder fennel searcher cannot require('fennel')"
-                end
                 opts = opts or {}
-                if opts.set_global then
-                    _G.fennel = fennel
-                end
-                if type(opts.macro_path) == "string" then
-                    fennel["macro-path"] = opts.macro_path
-                elseif type(opts.macro_path) == "function" then
-                    fennel["macro-path"] = opts.macro_path(fennel["macro-path"])
-                end
-                if type(opts.macro_searchers) == "function" then
-                    table.insert(fennel["macro-searchers"], opts.macro_searchers)
-                elseif type(opts.macro_searchers) == "table" then
-                    for _, v in ipairs(opts.macro_searchers or {}) do
-                        table.insert(fennel["macro-searchers"], v)
-                    end
-                end
                 local pt = type(opts.path)
                 local modpath
-                if pt == "function" then
-                    modpath = opts.path(modname, fennel.path)
-                elseif pt == "string" then
-                    modpath = MAIN.searchModule(modname, opts.path)
-                else
-                    modpath = MAIN.searchModule(modname, fennel.path)
+                if opts.nvim then
+                    modpath = rtpfile(opts.nvim, modname, { ".fnl", "/init.fnl" })
                 end
-                opts.filename = modpath
-                local lua_code
-                ok, lua_code = pcall(fennel.compileString, read_file(modpath), opts.compiler or {})
+                if not modpath then
+                    local p = (fennel or {}).path or DEFAULT_FNL_PATH
+                    if pt == "function" then
+                        modpath = opts.path(modname, p)
+                    elseif pt == "string" then
+                        modpath = MAIN.searchModule(modname, opts.path)
+                    else
+                        modpath = MAIN.searchModule(modname, p)
+                    end
+                end
+                if not triggered and modpath then
+                    triggered = true
+                    local macro_searcher = function(n)
+                        local mp = rtpfile(opts.nvim, n, { ".fnl", "/init.fnl", "/init-macros.fnl" })
+                        if mp then
+                            if not fennel then
+                                local ok
+                                ok, fennel = pcall(require, "fennel")
+                                if not ok then
+                                    fennel = nil
+                                end
+                            end
+                            if fennel then
+                                local ok, res = pcall(fennel.eval, read_file(mp), {
+                                    ["module-name"] = n,
+                                    filename = mp,
+                                    env = "_COMPILER",
+                                    requireAsInclude = false,
+                                })
+                                if ok then
+                                    return function()
+                                        return res
+                                    end
+                                end
+                                return "\t\nCould not load fennel macro module '"
+                                    .. tostring(n)
+                                    .. "' "
+                                    .. tostring(res or mp)
+                            end
+                            return "\t\nCould not load fennel to call macro module '" .. tostring(n) .. "'"
+                        else
+                            return "\t\nCould not find macro for module name '" .. tostring(n) .. "'"
+                        end
+                    end
+                    if type(fennel) == "table" then
+                        if opts.nvim then
+                            table.insert(fennel["macro-searchers"], macro_searcher)
+                        end
+                        if opts.on_first_compile then
+                            opts.on_first_compile(fennel, opts)
+                        end
+                    else
+                        local ok
+                        ok, fennel = pcall(require, "fennel")
+                        if not ok then
+                            fennel = nil
+                        else
+                            if opts.nvim then
+                                table.insert(fennel["macro-searchers"], macro_searcher)
+                            end
+                            if opts.on_first_compile then
+                                opts.on_first_compile(fennel, opts)
+                            end
+                        end
+                    end
+                end
+                if not modpath then
+                    return nil,
+                        nil,
+                        "\n\tfn_finder fennel searcher could not find a fennel file for '" .. tostring(modname) .. "'"
+                elseif not fennel then
+                    return nil, nil, "\n\tfn_finder fennel searcher cannot require('fennel')"
+                end
+                opts.compiler = opts.compiler or {}
+                opts.compiler.filename = modpath
+                local ok, lua_code = pcall(fennel.compileString, read_file(modpath), opts.compiler)
                 if ok and lua_code then
                     return lua_code, modpath, nil
                 else
                     return nil,
                         nil,
-                        "\n\tfn_finder fennel search function could not find a valid fennel file for '"
-                            .. modname
-                            .. "': "
-                            .. tostring(lua_code or modpath)
+                        "\n\tfn_finder fennel search function could not find a valid fennel file for '" .. tostring(
+                            modname
+                        ) .. "': " .. tostring(lua_code or modpath)
                 end
             end
         return MAIN.mkFinder(loader_opts)

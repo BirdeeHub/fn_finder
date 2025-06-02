@@ -47,7 +47,7 @@ local function read_file(filename)
         file:close()
         return content
     end
-    return nil, "Could not read file '" .. filename .. "'"
+    return nil, "Could not read file '" .. tostring(filename) .. "'"
 end
 
 local function simple_table_hash(input)
@@ -351,7 +351,7 @@ end
 local require_path = ...
 return setmetatable(M, {
     __index = function(t, k)
-        local res = require(require_path .. ".configs." .. k)(t)
+        local res = require(require_path .. ".configs." .. k)(t, _load)
         rawset(t, k, res)
         return res
     end,
