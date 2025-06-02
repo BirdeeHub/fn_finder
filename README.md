@@ -74,14 +74,15 @@ This function wraps `MAIN.mkFinder` with a default `search` function that compil
 
 ##### `fn_finder.FennelOpts` (extends `fn_finder.LoaderOpts`):
 
+All the normal loader options plus:
 * `search_opts` (`fn_finder.FennelSearchOpts?`): Options specific to Fennel module resolution.
 
 ##### `fn_finder.FennelSearchOpts`:
 
-* `path` (`string | fun(modname: string, existing: string): string`): Custom path string or function to resolve the module file.
-* `macro_path` (`string | fun(existing: string): string`): Path or function to adjust Fennel’s `macro-path`.
-* `macro_searchers` (`fun(modname: string): string | function?` | array): Additional macro searchers to be added to `fennel["macro-searchers"]`.
-* `compiler` (`table?`): Options table to pass to `fennel.compileString`.
+* `path` (`string | fun(modname: string, existing: string): string`)?: Custom path string or function to resolve the module file.
+* `compiler` (`table`)?: Options table to pass to `fennel.compileString`.
+* `on_first_compile` (`fun(fennel: table, opts: fn_finder.FennelSearchOpts)`)?: TODO
+* `nvim` (`string | boolean`)?: TODO
 
 #### Returns:
 
