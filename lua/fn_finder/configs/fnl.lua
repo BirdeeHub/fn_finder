@@ -86,27 +86,26 @@ return function(MAIN, _)
                                 end
                             end
                             if fennel then
-                                local ok, res = pcall(fennel.eval, read_file(mp), {
-                                    ["module-name"] = n,
-                                    filename = mp,
-                                    env = "_COMPILER",
-                                    requireAsInclude = false,
-                                })
-                                if ok then
+                                local content, err = read_file(mp)
+                                if content then
                                     return function()
-                                        return res
+                                        return fennel.eval(content, {
+                                            ["module-name"] = n,
+                                            filename = mp,
+                                            env = "_COMPILER",
+                                            requireAsInclude = false,
+                                        })
                                     end
+                                else
+                                    return errpre
+                                        .. "Fennel: Failed to read macro file for: '"
+                                        .. tostring(n)
+                                        .. "' at path: '"
+                                        .. tostring(mp)
+                                        .. "':"
+                                        .. errpre
+                                        .. tostring(err or mp)
                                 end
-                                return errpre
-                                    .. "Fennel Macro Compile Error for module:"
-                                    .. errpre
-                                    .. "'"
-                                    .. tostring(n)
-                                    .. "' at path: '"
-                                    .. tostring(mp)
-                                    .. "':"
-                                    .. errpre
-                                    .. tostring(res or mp)
                             end
                             return errpre .. "Could not require fennel to call macro module '" .. tostring(n) .. "'"
                         else
@@ -147,15 +146,20 @@ return function(MAIN, _)
                 end
                 opts.compiler = opts.compiler or {}
                 opts.compiler.filename = modpath
-                local ok, lua_code = pcall(fennel.compileString, read_file(modpath), opts.compiler)
-                if ok and lua_code then
-                    return lua_code, modpath, nil
+                local content, err = read_file(modpath)
+                if content then
+                    return fennel.compileString(content, opts.compiler), modpath, nil
                 else
                     return nil,
                         nil,
-                        errpre .. "Fennel Compile Error for '" .. tostring(modname) .. "' at path: '" .. tostring(
-                            modpath
-                        ) .. "':" .. errpre .. tostring(lua_code or modpath)
+                        errpre
+                            .. "Fennel: Failed to read module file for: '"
+                            .. tostring(modname)
+                            .. "' at path: '"
+                            .. tostring(modpath)
+                            .. "':"
+                            .. errpre
+                            .. tostring(err or modpath)
                 end
             end
         return MAIN.mkFinder(loader_opts)
