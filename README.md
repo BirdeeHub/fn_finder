@@ -18,7 +18,7 @@ One will be added that searches the nvim runtime path in the future, but it is f
 
 ## ⚡Quick Start
 
-- TODO: basic useage here:
+- TODO: document basic useage here:
 
 ---
 
@@ -46,8 +46,8 @@ Creates a module loader function suitable for use in `package.loaders` or `packa
 * `cache_opts` (`table?`): Options passed to the `get_cached` and `cache_chunk` functions. The default implementations accept:
     - `cache_dir` (`string?`): The directory to cache chunks in, defaults to `"/tmp/fn_finder/"`
     - `mkdir` (`fun(dir: string): string?`): Alternate function to create a directory
-* `get_cached` (`TODO`): Alternate function to retrieve a cached chunk and its metadata.
-* `cache_chunk` (`TODO`): Alternate function to write a chunk and its metadata to cache.
+* `get_cached` (`TODO: document`): Alternate function to retrieve a cached chunk and its metadata.
+* `cache_chunk` (`TODO: document`): Alternate function to write a chunk and its metadata to cache.
 * `fs_lib` (`fun(modpath: string, modname: string): fn_finder.FileAttrs?`): Alternate function to retrieve file system metadata, used for invalidation.
 * `auto_invalidate` (`boolean?`): Whether to automatically invalidate cache entries by comparing metadata, defaults to `true`.
 * `strip` (`boolean?`): Whether to strip lua debug info from cached chunks, defaults to `false`.
@@ -81,8 +81,8 @@ All the normal loader options plus:
 
 * `path` (`string | fun(modname: string, existing: string): string`)?: Custom path string or function to resolve the module file.
 * `compiler` (`table`)?: Options table to pass to `fennel.compileString`.
-* `on_first_compile` (`fun(fennel: table, opts: fn_finder.FennelSearchOpts)`)?: TODO
-* `nvim` (`string | boolean`)?: TODO
+* `on_first_compile` (`fun(fennel: table, opts: fn_finder.FennelSearchOpts)`)?: TODO: document
+* `nvim` (`string | boolean`)?: TODO: document
 
 #### Returns:
 
