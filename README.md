@@ -38,22 +38,22 @@ Creates a module loader function suitable for use in `package.loaders` or `packa
 
 ##### `fn_finder.LoaderOpts`:
 
-* `search`: Accepts one of the following forms:
+* `search`?: Accepts one of the following forms (defaults to searching `package.path`):
     - `string`: the string to search as the `package.path` for your lua dialect
     - `fun(n: string, search_opts: table, opts_hash: number, env?: table):` returns `chunk: nil|string|fun():string?, modpath: string?, err: string?`:
         - in this form, `chunk` is of the types accepted by the lua `load` function, and `modpath` is the full path to the module.
     - `fun(n: string, search_opts: table, opts_hash: number, env?: table):` returns `chunk: fun():any?, meta: fn_finder.Meta?, err: string?`:
         - in this form, `chunk` is like the lua function you would recieve from calling the `load` function yourself, and you also return a full `fn_finder.Meta` instance.
-* `search_opts` (`table?`): Options passed to the `search` function.
-* `cache_opts` (`table?`): Options passed to the `get_cached` and `cache_chunk` functions. The default implementations accept:
-    - `cache_dir` (`string?`): The directory to cache chunks in, defaults to `"/tmp/fn_finder/"`
-    - `mkdir` (`fun(dir: string): string?`): Alternate function to create a directory
-* `get_cached` (`TODO: document`): Alternate function to retrieve a cached chunk and its metadata.
-* `cache_chunk` (`TODO: document`): Alternate function to write a chunk and its metadata to cache.
-* `fs_lib` (`fun(modpath: string, modname: string): fn_finder.FileAttrs?`): Alternate function to retrieve file system metadata, used for invalidation.
-* `auto_invalidate` (`boolean?`): Whether to automatically invalidate cache entries by comparing metadata, defaults to `true`.
-* `strip` (`boolean?`): Whether to strip lua debug info from cached chunks, defaults to `false`.
-* `env` (`table?`): Table representing the execution environment for loaded modules (passed to lua `load` function if provided)
+* `search_opts` (`table`)?: Options passed to the `search` function.
+* `cache_opts` (`table`)?: Options passed to the `get_cached` and `cache_chunk` functions. The default implementations accept:
+    - `cache_dir` (`string`)?: The directory to cache chunks in, defaults to `"/tmp/fn_finder/"`
+    - `mkdir` (`fun(dir: string): string?`)?: Alternate function to create a directory
+* `get_cached` (`fun(modname: string, cache_opts: table):` returns `chunk: nil|string|fun():string?, meta: fn_finder.Meta, err: string?`)?: Alternate function to retrieve a cached chunk and its metadata.
+* `cache_chunk` (`fun(chunk: string, meta: fn_finder.Meta, cache_opts: table)`)?: Alternate function to write a chunk and its metadata to cache.
+* `fs_lib` (`fun(modpath: string, modname: string): fn_finder.FileAttrs?`)?: Alternate function to retrieve file system metadata, used for invalidation.
+* `auto_invalidate` (`boolean`)?: Whether to automatically invalidate cache entries by comparing metadata, defaults to `true`.
+* `strip` (`boolean`)?: Whether to strip lua debug info from cached chunks, defaults to `false`.
+* `env` (`table`)?: Table representing the execution environment for loaded modules (passed to lua `load` function if provided)
 
 #### Returns:
 
@@ -64,7 +64,7 @@ Creates a module loader function suitable for use in `package.loaders` or `packa
 ## 🌿 fn_finder.fnl { `mkFinder`, `install` }
 
 
-### `fn_finder.fnl.mkFinder(loader_opts?: fn_finder.FennelOpts): (modname: string) -> string|function|nil`
+### `fn_finder.fnl.mkFinder(loader_opts?: fn_finder.FennelOpts): fun(modname: string): string|function|nil`
 
 Creates a Fennel-aware module loader suitable for use in `package.loaders` or `package.searchers`.
 
@@ -77,7 +77,7 @@ This function wraps `MAIN.mkFinder` with a default `search` function that compil
 ##### `fn_finder.FennelOpts` (extends `fn_finder.LoaderOpts`):
 
 All the normal loader options plus:
-* `search_opts` (`fn_finder.FennelSearchOpts?`): Options specific to Fennel module resolution.
+* `search_opts` (`fn_finder.FennelSearchOpts?`)?: Options specific to Fennel module resolution.
 
 ##### `fn_finder.FennelSearchOpts`:
 
