@@ -98,14 +98,19 @@ return function(MAIN, _)
                                     end
                                 end
                                 return errpre
-                                    .. "Could not load fennel macro module '"
+                                    .. "Fennel Macro Compile Error for module:"
+                                    .. errpre
+                                    .. "'"
                                     .. tostring(n)
-                                    .. "' "
+                                    .. "' at path: '"
+                                    .. tostring(mp)
+                                    .. "':"
+                                    .. errpre
                                     .. tostring(res or mp)
                             end
-                            return errpre .. "Could not load fennel to call macro module '" .. tostring(n) .. "'"
+                            return errpre .. "Could not require fennel to call macro module '" .. tostring(n) .. "'"
                         else
-                            return errpre .. "Could not find macro for module name '" .. tostring(n) .. "'"
+                            return errpre .. "Could not find fennel macro module named '" .. tostring(n) .. "'"
                         end
                     end
                     if type(fennel) == "table" then
@@ -148,11 +153,9 @@ return function(MAIN, _)
                 else
                     return nil,
                         nil,
-                        errpre
-                            .. "fn_finder fennel search function could not find a valid fennel file for '"
-                            .. tostring(modname)
-                            .. "': "
-                            .. tostring(lua_code or modpath)
+                        errpre .. "Fennel Compile Error for '" .. tostring(modname) .. "' at path: '" .. tostring(
+                            modpath
+                        ) .. "':" .. errpre .. tostring(lua_code or modpath)
                 end
             end
         return MAIN.mkFinder(loader_opts)
