@@ -88,13 +88,13 @@ return function(MAIN, _)
                             if fennel then
                                 local content, err = read_file(mp)
                                 if content then
-                                    return function()
+                                    return function(...)
                                         return fennel.eval(content, {
                                             ["module-name"] = n,
                                             filename = mp,
                                             env = "_COMPILER",
                                             requireAsInclude = false,
-                                        })
+                                        }, ...)
                                     end
                                 else
                                     return errpre
