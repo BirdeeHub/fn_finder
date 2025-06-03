@@ -279,6 +279,7 @@ M.mkFinder = function(loader_opts)
     loader_opts.auto_invalidate = loader_opts.auto_invalidate ~= false
     local opts_hash = simple_table_hash({
         VERSION = _VERSION,
+        PACKAGE = { package.config, package.path },
         loader_opts = loader_opts,
     })
     return function(modname)
@@ -340,22 +341,28 @@ function M.escapepat(str)
     return string.gsub(str, "[^%w]", "%%%1")
 end
 
+local pathsepesc = M.escapepat(pathsep)
+local dirsepesc = M.escapepat(dirsep)
+local pathmarkesc = M.escapepat(dirsep)
+
 ---@param modulename string
 ---@param pathstring string
----@return string? modpath
-function M.searchModule(modulename, pathstring)
-    local pathsepesc = M.escapepat(pathsep)
+---@return string? modpath, string? err
+M.searchModule = function(modulename, pathstring)
+    local errmsg = {}
     local pathsplit = string.format("([^%s]*)%s", pathsepesc, pathsepesc)
-    local nodotModule = modulename:gsub("%.", dirsep)
+    local name = modulename:gsub("%.", dirsep):gsub("^" .. dirsepesc .. "*", "")
     for path in string.gmatch(pathstring .. pathsep, pathsplit) do
-        local filename = path:gsub(M.escapepat(pathmark), nodotModule)
-        local filename2 = path:gsub(M.escapepat(pathmark), modulename)
-        local file = io.open(filename) or io.open(filename2)
+        local filename = path:gsub(pathmarkesc, name)
+        local file = io.open(filename)
         if file then
             file:close()
             return filename
+        else
+            table.insert(errmsg, errpre .. "no file '" .. filename .. "'")
         end
     end
+    return nil, table.concat(errmsg)
 end
 
 local require_path = ...
