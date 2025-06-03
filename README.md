@@ -2,6 +2,8 @@
 
 # ATTENTION: THIS REPO IS STILL UNDER EARLY ALPHA DEVELOPMENT. ANYTHING IS SUBJECT TO CHANGE.
 
+# In fact, everything will change, guaranteed, as there are still issues to be figured out.
+
 I wanted to try fennel
 
 I did not want to add a build step to my configurations
