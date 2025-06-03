@@ -76,7 +76,7 @@ return function(MAIN, _)
                 if not triggered and modpath then
                     triggered = true
                     local macro_searcher = function(n)
-                        local mp = rtpfile(opts.nvim, n, { ".fnl", "/init.fnl", "/init-macros.fnl" })
+                        local mp = rtpfile(opts.nvim, n, { ".fnl", "/init-macros.fnl", "/init.fnl" })
                         if mp then
                             if not fennel then
                                 local ok
