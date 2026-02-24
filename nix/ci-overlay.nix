@@ -26,7 +26,7 @@
       src = self;
       neovim = nvim-wrapped;
 
-      # luaPackages = ps: with ps; [];
+      luaPackages = ps: with ps; [fennel];
       # extraPackages = [];
 
       preCheck = ''

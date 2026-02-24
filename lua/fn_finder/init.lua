@@ -36,7 +36,7 @@ local lua_ver_at_least = function(major, minor)
 end
 
 -- have searchModule use package.config to process package.path (windows compat)
-local cfg = string.gmatch(package.config, "([^\n]+)")
+local cfg = package.config:gmatch("([^\n]+)")
 local dirsep, pathsep, pathmark = cfg() or "/", cfg() or ";", cfg() or "?"
 local errpre = lua_ver_at_least(5, 4) and "" or "\n\t"
 
