@@ -1,9 +1,4 @@
-**/result
-**/repl-result-out
-**/.nvim.lua
-**/.cache
-**/compile_commands.json
-**/build
-**/.pre-commit-config.yaml
-**/.direnv
-**/.luarc.json
+result
+.pre-commit-config.yaml
+.direnv
+.luarc.json
