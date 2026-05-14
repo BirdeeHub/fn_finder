@@ -26,6 +26,15 @@
     name = "fn_finder";
     perSystem = nixpkgs.lib.genAttrs nixpkgs.lib.platforms.all;
     lpkgs = lp: with lp; [fennel luafilesystem];
+    l_pkg_enum = {
+      lua5_1 = "lua51Packages";
+      lua5_2 = "lua52Packages";
+      lua5_3 = "lua53Packages";
+      lua5_4 = "lua54Packages";
+      lua5_5 = "lua55Packages";
+      luajit = "luajitPackages";
+      lua = "luaPackages";
+    };
     mk-luarc = pkgs:
       pkgs.mk-luarc {plugins = lpkgs pkgs.luajit.pkgs;};
     mk-nvim-args = src: neovim: let
@@ -92,45 +101,62 @@
       };
   in {
     overlays.default = final: prev: let
-      packageOverrides = luaself: luaprev: {
-        ${name} = luaself.callPackage (
-          {buildLuarocksPackage}:
-            buildLuarocksPackage {
-              pname = name;
-              version = "scm-1";
-              knownRockspec = "${self}/${name}-scm-1.rockspec";
-              src = self;
-              checkPhase = ''
-                runHook preCheck
-                export HOME=$(mktemp -d)
-                ${mk-nvim-args "$src" final.neovim-unwrapped}
-                runHook postCheck
-              '';
-            }
-        ) {};
-      };
-
-      lua5_1 = prev.lua5_1.override {
-        inherit packageOverrides;
-      };
-      lua51Packages = final.lua5_1.pkgs;
-
-      vimPlugins =
-        prev.vimPlugins
-        // {
-          ${name} = final.neovimUtils.buildNeovimPlugin {
-            pname = name;
-            version = "dev";
-            src = self;
-          };
+      luaCallPackageFn = {buildLuarocksPackage}:
+        buildLuarocksPackage {
+          pname = name;
+          version = "scm-1";
+          knownRockspec = "${self}/${name}-scm-1.rockspec";
+          src = self;
+          checkPhase = ''
+            runHook preCheck
+            export HOME=$(mktemp -d)
+            ${mk-nvim-args "$src" prev.neovim-unwrapped}
+            runHook postCheck
+          '';
         };
-    in {
-      inherit
-        lua5_1
-        lua51Packages
-        vimPlugins
-        ;
-    };
+
+      # lua5_1 = prev.lua5_1.override { packageOverrides };
+      l_pkg_main =
+        builtins.mapAttrs (
+          n: _:
+            (prev.lib.attrByPath [n "override"] null prev) (old: {
+              packageOverrides = luaself: luaprev: (
+                (
+                  if old ? packageOverrides
+                  then old.packageOverrides luaself luaprev
+                  else {}
+                )
+                // {
+                  ${name} = luaself.callPackage luaCallPackageFn {};
+                }
+              );
+            })
+        )
+        l_pkg_enum;
+      # lua51Packages = final.lua5_1.pkgs;
+      l_pkg_sets = builtins.listToAttrs (
+        prev.lib.mapAttrsToList (
+          n: v: {
+            name = v;
+            value = prev.lib.attrByPath [n "pkgs"] null final;
+          }
+        )
+        l_pkg_enum
+      );
+    in
+      l_pkg_main
+      // l_pkg_sets
+      // {
+        vimPlugins =
+          prev.vimPlugins
+          // {
+            ${name} = final.neovimUtils.buildNeovimPlugin {
+              pname = name;
+              version = "dev";
+              src = self;
+            };
+          };
+      };
 
     devShells = perSystem (
       system: let
@@ -157,17 +183,25 @@
       }
     );
 
-    packages = perSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system}.appendOverlays [
-          self.overlays.default
-        ];
-      in {
-        default = self.packages.${system}."${name}-vimPlugin";
-        "${name}-luaPackage" = pkgs.lua51Packages.${name};
+    packages = perSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system}.appendOverlays [
+        self.overlays.default
+      ];
+    in
+      (
+        with builtins;
+          listToAttrs (
+            map (n: {
+              name = "${n}-${name}";
+              value = pkgs.lib.attrByPath [n "pkgs" name] null pkgs;
+            }) (attrNames l_pkg_enum)
+          )
+      )
+      // {
+        default = pkgs.vimPlugins.${name};
         "${name}-vimPlugin" = pkgs.vimPlugins.${name};
-      }
-    );
+        "vimPlugins-${name}" = pkgs.vimPlugins.${name};
+      });
 
     checks = perSystem (
       system: let
