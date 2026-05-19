@@ -29,7 +29,7 @@
     l_pkg_enum = ["lua5_1" "lua5_2" "lua5_3" "lua5_4" "lua5_5" "luajit" "lua"];
     mk-luarc = pkgs:
       pkgs.mk-luarc {plugins = lpkgs pkgs.luajit.pkgs;};
-    mk-nvim-args = src: neovim: ''${nixpkgs.lib.getExe neovim} --headless --cmd "lua package.path = package.path .. ';${neovim.lua.pkgs.getLuaPath neovim.lua.pkgs.fennel}" --cmd "luafile ${src}/test.lua" +qall!'';
+    mk-nvim-args = src: neovim: ''PATH="$PATH:${neovim}/bin" nvim --headless --cmd "lua package.path = package.path .. ';${neovim.lua.pkgs.getLuaPath neovim.lua.pkgs.fennel}" --cmd "luafile ${src}/test.lua" +qall!'';
     testshook = pkgs: {
       enable = true;
       name = "run-${name}-tests";
