@@ -1,4 +1,4 @@
-#!/usr/bin/env -S nvim -l
+#!/usr/bin/env lua
 local function cwd()
     local sep = package.config:sub(1, 1)
     local info = debug.getinfo(1, "S")

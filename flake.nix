@@ -26,25 +26,14 @@
     name = "fn_finder";
     perSystem = nixpkgs.lib.genAttrs nixpkgs.lib.platforms.all;
     lpkgs = lp: with lp; [fennel luafilesystem];
-    l_pkg_enum = {
-      lua5_1 = "lua51Packages";
-      lua5_2 = "lua52Packages";
-      lua5_3 = "lua53Packages";
-      lua5_4 = "lua54Packages";
-      lua5_5 = "lua55Packages";
-      luajit = "luajitPackages";
-      lua = "luaPackages";
-    };
+    l_pkg_enum = ["lua5_1" "lua5_2" "lua5_3" "lua5_4" "lua5_5" "luajit" "lua"];
     mk-luarc = pkgs:
       pkgs.mk-luarc {plugins = lpkgs pkgs.luajit.pkgs;};
-    mk-nvim-args = src: neovim: let
-      lpath = "package.path = package.path .. ';${builtins.concatStringsSep ";" (map neovim.lua.pkgs.getLuaPath (lpkgs neovim.lua.pkgs))}";
-      lcpath = "package.cpath = package.cpath .. ';${builtins.concatStringsSep ";" (map neovim.lua.pkgs.getLuaCPath (lpkgs neovim.lua.pkgs))}";
-    in ''${nixpkgs.lib.getExe neovim} --headless --cmd "lua ${lpath}" --cmd "lua ${lcpath}" --cmd "luafile ${src}/test.nvim" +qall!'';
+    mk-nvim-args = src: neovim: ''${nixpkgs.lib.getExe neovim} --headless --cmd "lua package.path = package.path .. ';${neovim.lua.pkgs.getLuaPath neovim.lua.pkgs.fennel}" --cmd "luafile ${src}/test.lua" +qall!'';
     testshook = pkgs: {
       enable = true;
       name = "run-${name}-tests";
-      entry = "${pkgs.writeShellScript "run-${name}-tests" ''
+      entry = "${pkgs.writeShellScript "run-${name}-nvim-tests" ''
         set -e
         export HOME="$(mktemp -d)"
         gitroot="$(git rev-parse --show-toplevel)"
@@ -100,102 +89,65 @@
         };
       };
   in {
-    overlays.default = final: prev: let
-      luaCallPackageFn = {buildLuarocksPackage}:
-        buildLuarocksPackage {
-          pname = name;
-          version = "scm-1";
-          knownRockspec = "${self}/${name}-scm-1.rockspec";
-          src = self;
+    overlays.default = import ./mkLuaOverlay.nix {
+      packageOverrides = luaself: luaprev: {
+        ${name} = luaself.callPackage (
+          {buildLuarocksPackage}:
+            buildLuarocksPackage {
+              pname = name;
+              version = "scm-1";
+              src = self;
+            }
+        ) {};
+      };
+      vimPlugins = final: prev: {
+        ${name} = (final.neovimUtils.buildNeovimPlugin {pname = name;}).overrideAttrs {
           checkPhase = ''
             runHook preCheck
             export HOME=$(mktemp -d)
-            ${mk-nvim-args "$src" prev.neovim-unwrapped}
+            ${mk-nvim-args "$src" final.neovim-unwrapped}
             runHook postCheck
           '';
         };
-
-      # lua5_1 = prev.lua5_1.override { packageOverrides };
-      l_pkg_main =
-        builtins.mapAttrs (
-          n: _:
-            (prev.lib.attrByPath [n "override"] null prev) (old: {
-              packageOverrides = luaself: luaprev: (
-                (
-                  if old ? packageOverrides
-                  then old.packageOverrides luaself luaprev
-                  else {}
-                )
-                // {
-                  ${name} = luaself.callPackage luaCallPackageFn {};
-                }
-              );
-            })
-        )
-        l_pkg_enum;
-      # lua51Packages = final.lua5_1.pkgs;
-      l_pkg_sets = builtins.listToAttrs (
-        prev.lib.mapAttrsToList (
-          n: v: {
-            name = v;
-            value = prev.lib.attrByPath [n "pkgs"] null final;
-          }
-        )
-        l_pkg_enum
-      );
-    in
-      l_pkg_main
-      // l_pkg_sets
-      // {
-        vimPlugins =
-          prev.vimPlugins
-          // {
-            ${name} = final.neovimUtils.buildNeovimPlugin {
-              pname = name;
-              version = "dev";
-              src = self;
-            };
-          };
       };
+    };
 
-    devShells = perSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system}.appendOverlays [
-          gen-luarc.overlays.default
-          self.overlays.default
-        ];
-        luarc = mk-luarc pkgs;
-      in rec {
-        default = pkgs.mkShell {
-          name = "${name} devShell";
-          DEVSHELL = 0;
-          shellHook = ''
-            ${(pre-commit-check pkgs luarc).shellHook}
-            ln -fs ${pkgs.luarc-to-json luarc} .luarc.json
-          '';
-          buildInputs =
-            self.checks.${system}.pre-commit-check.enabledPackages
-            ++ (with pkgs; [
-              lua-language-server
-            ]);
-        };
-        devShell = default;
-      }
-    );
-
-    packages = perSystem (system: let
+    devShells = perSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system}.appendOverlays [
+        gen-luarc.overlays.default
         self.overlays.default
       ];
+      luarc = mk-luarc pkgs;
+    in rec {
+      default = pkgs.mkShell {
+        name = "${name} devShell";
+        DEVSHELL = 0;
+        shellHook = ''
+          ${(pre-commit-check pkgs luarc).shellHook}
+          ln -fs ${pkgs.luarc-to-json luarc} .luarc.json
+        '';
+        buildInputs =
+          self.checks.${system}.pre-commit-check.enabledPackages
+          ++ (
+            with pkgs; [
+              lua-language-server
+            ]
+          );
+      };
+      devShell = default;
+    });
+
+    packages = perSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system}.appendOverlays [self.overlays.default];
     in
       (
-        with builtins;
-          listToAttrs (
-            map (n: {
-              name = "${n}-${name}";
-              value = pkgs.lib.attrByPath [n "pkgs" name] null pkgs;
-            }) (attrNames l_pkg_enum)
-          )
+        builtins.listToAttrs (
+          map (n: {
+            name = "${n}-${name}";
+            value = pkgs.lib.attrByPath [n "pkgs" name] null pkgs;
+          })
+          l_pkg_enum
+        )
       )
       // {
         default = pkgs.vimPlugins.${name};
@@ -203,30 +155,28 @@
         "vimPlugins-${name}" = pkgs.vimPlugins.${name};
       });
 
-    checks = perSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system}.appendOverlays [
-          gen-luarc.overlays.default
-          self.overlays.default
-        ];
-        nightlypkgs = pkgs.appendOverlays [inputs.neovim-nightly-overlay.overlays.default];
-      in {
-        pre-commit-check = pre-commit-check pkgs (mk-luarc pkgs);
-        vimPlugins = pkgs.vimPlugins.${name}.overrideAttrs {doCheck = true;};
-        luaPackage = pkgs.lua51Packages.${name}.overrideAttrs {doCheck = true;};
-        vimPlugins-nigtly = nightlypkgs.vimPlugins.${name}.overrideAttrs {doCheck = true;};
-        luaPackage-nigtly = nightlypkgs.lua51Packages.${name}.overrideAttrs {doCheck = true;};
-        type-check-nightly = pre-commit-hooks.lib.${system}.run {
-          src = self;
-          hooks = {
-            lua-ls = {
-              enable = true;
-              settings.configuration = mk-luarc nightlypkgs;
-            };
-            run-tests = testshook pkgs;
+    checks = perSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system}.appendOverlays [
+        gen-luarc.overlays.default
+        self.overlays.default
+      ];
+      nightlypkgs = pkgs.appendOverlays [inputs.neovim-nightly-overlay.overlays.default];
+    in {
+      pre-commit-check = pre-commit-check pkgs (mk-luarc pkgs);
+      vimPlugins = pkgs.vimPlugins.${name}.overrideAttrs {doCheck = true;};
+      luaPackage = pkgs.lua51Packages.${name}.overrideAttrs {doCheck = true;};
+      vimPlugins-nigtly = nightlypkgs.vimPlugins.${name}.overrideAttrs {doCheck = true;};
+      luaPackage-nigtly = nightlypkgs.lua51Packages.${name}.overrideAttrs {doCheck = true;};
+      type-check-nightly = pre-commit-hooks.lib.${system}.run {
+        src = self;
+        hooks = {
+          lua-ls = {
+            enable = true;
+            settings.configuration = mk-luarc nightlypkgs;
           };
+          run-tests = testshook pkgs;
         };
-      }
-    );
+      };
+    });
   };
 }

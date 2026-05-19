@@ -1,9 +1,17 @@
 local M = {}
 
-local _load = load
+local _load = function(...)
+    if not select(1, ...) then
+        return nil, "chunk is " .. tostring(select(1, ...))
+    end
+    return load(...)
+end
 
 if load == nil then -- 5.1 compat
     _load = function(chunk, chunkname, _, env)
+        if not chunk then
+            return nil, "chunk is nil"
+        end
         if type(chunk) == "function" then
             local res = chunk()
             local function i()
@@ -13,6 +21,7 @@ if load == nil then -- 5.1 compat
             end
             while i() do
             end
+            ---@cast res string
             chunk = res
         end
         local f, err = loadstring(chunk, chunkname)
